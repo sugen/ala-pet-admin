@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { loginAdmin, saveAdminToken } from "@/lib/api";
+import { apiFailureMessage, loginAdmin, saveAdminToken } from "@/lib/api";
 
 const loginSchema = z.object({
   username: z.string().min(2, "请输入用户名"),
@@ -31,7 +31,7 @@ export function LoginForm() {
       setMessage("登录成功");
       router.push("/dashboard");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "登录失败");
+      setMessage(apiFailureMessage(error, "登录失败"));
     }
   }
 

@@ -16,6 +16,16 @@ COPYFILE_DISABLE=1 tar \
   --exclude='./coverage' \
   --exclude='./dist' \
   --exclude='./build' \
+  --exclude='./.venv' \
+  --exclude='./venv' \
+  --exclude='./env' \
+  --exclude='./__pycache__' \
+  --exclude='./**/__pycache__' \
+  --exclude='./*.log' \
+  --exclude='./**/*.log' \
+  --exclude='./.env' \
+  --exclude='./.env.*' \
+  --exclude='./config/*.local.yaml' \
   --exclude='./exports' \
   --exclude='./.DS_Store' \
   -czf "${ARCHIVE_PATH}" \

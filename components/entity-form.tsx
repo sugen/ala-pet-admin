@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { PageTitle } from "@/components/page-title";
-import { getEntity, submitEntity, type EntityKind } from "@/lib/api";
+import { apiFailureMessage, getEntity, submitEntity, type EntityKind } from "@/lib/api";
 
 const entitySchema = z.object({
   title: z.string().min(2, "请填写标题或名称"),
@@ -20,7 +20,7 @@ const entitySchema = z.object({
   publish_type: z.enum(["news", "daily", "beauty", "observer", "brand", "sample", "metric"]),
   risk_level: z.enum(["low", "medium", "high"]),
   beauty_channel: z.enum(["none", "news", "products", "stores", "mobile-grooming", "groomers", "trends"]),
-  status: z.enum(["draft", "published", "offline"])
+  status: z.enum(["draft", "ai_generated", "risk_blocked", "published", "offline"])
 });
 
 type EntityFormValues = z.infer<typeof entitySchema>;
@@ -52,7 +52,7 @@ export function EntityForm({ title, description, entity, id }: { title: string; 
           status: (String(item.status ?? "draft") as EntityFormValues["status"])
         });
       })
-      .catch((error) => setMessage(error instanceof Error ? error.message : "加载失败"));
+      .catch((error) => setMessage(apiFailureMessage(error, "加载记录失败")));
   }, [entity, form, id]);
 
   async function onSubmit(values: EntityFormValues) {
@@ -65,7 +65,7 @@ export function EntityForm({ title, description, entity, id }: { title: string; 
         router.refresh();
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "保存失败");
+      setMessage(apiFailureMessage(error, "保存失败"));
     }
   }
 
@@ -136,6 +136,8 @@ export function EntityForm({ title, description, entity, id }: { title: string; 
             状态
             <select className="h-11 rounded-md border border-line px-3 outline-none focus:border-gold" {...form.register("status")}>
               <option value="draft">草稿</option>
+              <option value="ai_generated">AI 已生成</option>
+              <option value="risk_blocked">风险拦截</option>
               <option value="published">已发布</option>
               <option value="offline">已下线</option>
             </select>

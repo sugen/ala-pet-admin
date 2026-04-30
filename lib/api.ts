@@ -6,6 +6,9 @@ export type AdminRow = {
   updatedAt: string;
   slug?: string;
   publishType?: string;
+  sourceUrl?: string;
+  riskLevel?: string;
+  contentHash?: string;
 };
 
 export type DashboardStat = {
@@ -23,6 +26,7 @@ export type EntityKind =
   | "sources"
   | "crawl-tasks"
   | "ai-tasks"
+  | "raw-contents"
   | "public-events"
   | "leads"
   | "seo"
@@ -48,6 +52,9 @@ type LoginResponse = {
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const apiMode = process.env.NEXT_PUBLIC_API_MODE || "real";
+if (process.env.NODE_ENV === "production" && apiMode === "mock") {
+  throw new Error("NEXT_PUBLIC_API_MODE=mock is not allowed in production. Use NEXT_PUBLIC_API_MODE=real.");
+}
 const resolvedApiBaseUrl = apiBaseUrl || "http://127.0.0.1:8080";
 const tokenStorageKey = "ala-pet-admin-token";
 
@@ -84,6 +91,9 @@ const mockRows: Record<EntityKind, AdminRow[]> = {
   "ai-tasks": [
     { id: "AI-001", name: "事实抽取与摘要", status: "成功", owner: "AI Worker", updatedAt: "2026-04-30 16:10" },
     { id: "AI-002", name: "合规检查", status: "排队中", owner: "AI Worker", updatedAt: "2026-04-30 16:42" }
+  ],
+  "raw-contents": [
+    { id: "RAW-001", name: "宠物美容测试公开动态", status: "pending", owner: "本地公开测试源", updatedAt: "2026-04-30 22:58", sourceUrl: "http://127.0.0.1:18091/public-source.html", riskLevel: "unknown" }
   ],
   "public-events": [
     { id: "EVT-001", name: "宠物洗护门店关注标准化服务体验", status: "已确认", owner: "事件库", updatedAt: "2026-04-30 13:22" }
@@ -137,12 +147,27 @@ async function request<T>(path: string, fallback: T, init?: RequestInit, options
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(new URL(path, resolvedApiBaseUrl).toString(), { ...init, headers, cache: "no-store" });
+  let response: Response;
+  try {
+    response = await fetch(new URL(path, resolvedApiBaseUrl).toString(), { ...init, headers, cache: "no-store" });
+  } catch (error) {
+    const detail = error instanceof Error && error.message ? error.message : "网络连接失败";
+    throw new Error(`API 暂时不可用（${path}）：${detail}`);
+  }
   const body = (await response.json().catch(() => null)) as ApiResponse<T> | null;
-  if (!response.ok || !body || body.code !== 0) {
-    throw new Error(body?.message || `请求失败：${response.status}`);
+  if (!body) {
+    throw new Error(`API 返回格式异常（${path}，HTTP ${response.status}）`);
+  }
+  if (!response.ok || body.code !== 0) {
+    const requestId = body.request_id ? `，request_id=${body.request_id}` : "";
+    throw new Error(`API 请求失败（${path}）：${body.message || `HTTP ${response.status}`}${requestId}`);
   }
   return body.data ?? fallback;
+}
+
+export function apiFailureMessage(error: unknown, action: string) {
+  const detail = error instanceof Error && error.message ? error.message : "未知错误";
+  return `${action}：${detail}`;
 }
 
 function listResult<T>(items: T[]): ListResponse<T> {
@@ -166,8 +191,8 @@ export async function getDashboard() {
   });
 }
 
-export async function listEntityRows(kind: EntityKind) {
-  const data = await request<ListResponse<Record<string, unknown>>>(listPath(kind), listResult(mockRows[kind] ?? []));
+export async function listEntityRows(kind: EntityKind, options: { status?: string; processStatus?: string } = {}) {
+  const data = await request<ListResponse<Record<string, unknown>>>(listPath(kind, options), listResult(mockRows[kind] ?? []));
   return { items: data.items.map(toAdminRow), total: data.total };
 }
 
@@ -200,15 +225,25 @@ function toAdminRow(item: Record<string, unknown>): AdminRow {
   return {
     id,
     name: String(item.name ?? item.title ?? item.task_name ?? id),
-    status: String(item.status ?? ""),
+    status: String(item.status ?? item.process_status ?? ""),
     owner: String(item.owner ?? item.sourceName ?? item.source_name ?? item.role ?? ""),
-    updatedAt: String(item.updatedAt ?? item.updated_at ?? ""),
+    updatedAt: String(item.updatedAt ?? item.updated_at ?? item.created_at ?? ""),
     slug: typeof item.slug === "string" ? item.slug : undefined,
-    publishType: typeof item.publishType === "string" ? item.publishType : undefined
+    publishType: typeof item.publishType === "string" ? item.publishType : undefined,
+    sourceUrl: typeof item.source_url === "string" ? item.source_url : typeof item.sourceUrl === "string" ? item.sourceUrl : undefined,
+    riskLevel: typeof item.risk_level === "string" ? item.risk_level : typeof item.riskLevel === "string" ? item.riskLevel : undefined,
+    contentHash: typeof item.content_hash === "string" ? item.content_hash : undefined
   };
 }
 
-function listPath(kind: EntityKind) {
+function listPath(kind: EntityKind, options: { status?: string; processStatus?: string } = {}) {
+  const query = new URLSearchParams();
+  if (options.status) {
+    query.set("status", options.status);
+  }
+  if (options.processStatus) {
+    query.set("process_status", options.processStatus);
+  }
   if (kind === "daily") {
     return "/api/admin/articles?publish_type=daily";
   }
@@ -224,5 +259,6 @@ function listPath(kind: EntityKind) {
   if (kind === "seo" || kind === "settings") {
     return "/api/admin/settings";
   }
-  return `/api/admin/${kind}`;
+  const suffix = query.toString();
+  return `/api/admin/${kind}${suffix ? `?${suffix}` : ""}`;
 }

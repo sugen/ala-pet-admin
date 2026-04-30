@@ -21,16 +21,26 @@ npm install
 npm run dev
 ```
 
-默认访问：`http://localhost:3001`。
+默认访问：`http://localhost:3100`。
+
+固定端口本地验证：
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8080 NEXT_PUBLIC_API_MODE=real npm run dev
+bash scripts/smoke-admin-ui.sh
+bash scripts/smoke-all.sh
+```
+
+`scripts/smoke-admin-ui.sh` 验证后台主要页面可访问；`scripts/smoke-all.sh` 会先检查 API 健康、后台登录 API、执行类型检查、确认生产 mock guard，再运行页面 smoke 和后台主菜单页面检查。
 
 ## 环境变量
 
 ```text
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
-NEXT_PUBLIC_API_MODE=mock
+NEXT_PUBLIC_API_MODE=real
 ```
 
-`NEXT_PUBLIC_API_MODE=mock` 时后台使用 `lib/api.ts` 中的 mock 数据，适合第一版骨架、本地开发和静态构建。切换为 `real` 后会通过 `NEXT_PUBLIC_API_BASE_URL` 请求 `/api/admin/*`，请求失败时回退到 mock 数据，方便逐步接入真实 API。
+`NEXT_PUBLIC_API_MODE=real` 是默认值，后台通过 `NEXT_PUBLIC_API_BASE_URL` 请求 `/api/admin/*`。`NEXT_PUBLIC_API_MODE=mock` 仅允许本地开发或骨架预览使用；生产构建或生产运行环境中设置为 `mock` 会直接报错。
 
 ## 数据与表单
 
@@ -99,20 +109,4 @@ COMPOSE_PROJECT_NAME=ala-pet-admin-2 ADMIN_PORT=3101 ./scripts/deploy.sh --force
 5. 执行 `scripts/healthcheck.sh`
 
 ## 菜单
-*** Add File: /Users/steven/project/alapet/ala-pet-api/docker-compose.yml
-services:
-	api:
-		build:
-			context: .
-			dockerfile: Dockerfile
-		image: ${API_IMAGE:-ala-pet-api:latest}
-		restart: unless-stopped
-		env_file:
-			- ./.env
-		environment:
-			APP_PORT: ${APP_PORT:-8080}
-		ports:
-			- "${API_PORT:-8080}:${APP_PORT:-8080}"
-
-
 后台菜单包括：工作台、内容管理、品牌库、声量观察、样本库、来源管理、采集任务、AI任务、公开事件、线索管理、SEO管理、系统设置。内容管理下保留日报管理和美容频道入口，用于第一版内容工作流拆分。

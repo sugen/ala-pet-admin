@@ -22,12 +22,12 @@ env_value() {
 
 HOST_PORT="$(env_value ADMIN_PORT 3100)"
 for _ in {1..30}; do
-  if curl -fsS -L "http://127.0.0.1:${HOST_PORT}/" >/dev/null; then
+  if curl -fsS -L --max-time 10 "http://127.0.0.1:${HOST_PORT}/" >/dev/null; then
     echo "ala-pet-admin healthcheck ok"
     exit 0
   fi
   sleep 1
 done
 
-curl -fsS -L "http://127.0.0.1:${HOST_PORT}/" >/dev/null
+curl -fsS -L --max-time 10 "http://127.0.0.1:${HOST_PORT}/" >/dev/null
 echo "ala-pet-admin healthcheck ok"

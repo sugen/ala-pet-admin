@@ -3,6 +3,7 @@ import { BarChart3, Bot, Briefcase, FileText, Gauge, Globe2, LayoutDashboard, Li
 export const sidebarNav = [
   { href: "/dashboard", label: "工作台", icon: LayoutDashboard },
   { href: "/articles", label: "内容管理", icon: Newspaper, group: "内容管理" },
+  { href: "/raw-contents", label: "原始内容", icon: FileText, group: "内容管理" },
   { href: "/daily", label: "日报管理", icon: FileText, group: "内容管理" },
   { href: "/beauty", label: "美容频道", icon: Tags, group: "内容管理" },
   { href: "/brands", label: "品牌库", icon: Briefcase },

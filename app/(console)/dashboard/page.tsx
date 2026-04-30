@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, Bot, CheckCircle2, Clock, Database, FileText, LineChart, Newspaper, Shield, Wallet } from "lucide-react";
 import { DataTable } from "@/components/data-table";
 import { PageTitle } from "@/components/page-title";
-import { getDashboard, type AdminRow, type DashboardStat } from "@/lib/api";
+import { apiFailureMessage, getDashboard, type AdminRow, type DashboardStat } from "@/lib/api";
 
 const statIcons = [
   Database,
@@ -27,7 +27,7 @@ export default function DashboardPage() {
         setDashboard(data);
         setMessage("");
       })
-      .catch((error) => setMessage(error instanceof Error ? error.message : "加载失败"));
+      .catch((error) => setMessage(apiFailureMessage(error, "加载工作台失败")));
   }, []);
 
   return (
