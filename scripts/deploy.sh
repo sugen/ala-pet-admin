@@ -2,39 +2,80 @@
 set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONFIG_FILE="${CONFIG_FILE:-${ROOT_DIR}/config/production.local.yaml}"
+PROJECT_NAME="ala-pet-admin"
+ENV_FILE="${ENV_FILE:-${ROOT_DIR}/.env}"
+FORCE=0
 
-if [[ ! -f "${CONFIG_FILE}" ]]; then
-  echo "missing config file: ${CONFIG_FILE}"
+log() {
+  printf '[%s] %s\n' "${PROJECT_NAME}" "$*"
+}
+
+die() {
+  log "ERROR: $*"
   exit 1
+}
+
+usage() {
+  cat <<'EOF'
+Usage: ./scripts/deploy.sh [--force]
+
+Options:
+  --force   Force rebuild and restart even when git HEAD is unchanged.
+EOF
+}
+
+while (($# > 0)); do
+  case "$1" in
+    --force)
+      FORCE=1
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      die "unknown argument: $1"
+      ;;
+  esac
+  shift
+done
+
+command -v git >/dev/null 2>&1 || die "git is required"
+command -v docker >/dev/null 2>&1 || die "docker is required"
+docker compose version >/dev/null 2>&1 || die "docker compose is required"
+[[ -f "${ENV_FILE}" ]] || die "missing env file: ${ENV_FILE}; copy .env.example to .env first"
+
+cd "${ROOT_DIR}"
+
+if [[ -n "$(git status --porcelain)" ]]; then
+  die "working tree is dirty; commit or stash changes before deploy"
 fi
 
-yaml_get() {
-  ruby -ryaml -e 'data = YAML.load_file(ARGV[0]); ARGV[1].split(".").each { |key| data = data.fetch(key) }; print data' "${CONFIG_FILE}" "$1"
-}
+current_branch="$(git rev-parse --abbrev-ref HEAD)"
+old_head="$(git rev-parse HEAD)"
 
-yaml_get_optional() {
-  ruby -ryaml -e 'data = YAML.load_file(ARGV[0]); ARGV[1].split(".").each { |key| data = data.is_a?(Hash) ? data[key] : nil }; print(data.nil? ? ARGV[2] : data)' "${CONFIG_FILE}" "$1" "$2"
-}
+log "fetching latest code from origin/${current_branch}"
+git fetch --prune origin
+git pull --ff-only origin "${current_branch}"
 
-IMAGE="$(yaml_get docker.image)"
-CONTAINER="$(yaml_get docker.container_name)"
-HOST_PORT="$(yaml_get docker.host_port)"
-APP_PORT="$(yaml_get app.port)"
-API_BASE_URL="$(yaml_get app.api_base_url)"
-API_MODE="$(yaml_get_optional app.api_mode mock)"
+new_head="$(git rev-parse HEAD)"
+compose_cmd=(docker compose --env-file "${ENV_FILE}")
 
-docker build \
-  --build-arg NEXT_PUBLIC_API_BASE_URL="${API_BASE_URL}" \
-  --build-arg NEXT_PUBLIC_API_MODE="${API_MODE}" \
-  -t "${IMAGE}" "${ROOT_DIR}"
-docker rm -f "${CONTAINER}" >/dev/null 2>&1 || true
-docker run -d \
-  --name "${CONTAINER}" \
-  --restart unless-stopped \
-  -p "${HOST_PORT}:${APP_PORT}" \
-  -e NEXT_PUBLIC_API_BASE_URL="${API_BASE_URL}" \
-  -e NEXT_PUBLIC_API_MODE="${API_MODE}" \
-  "${IMAGE}"
+if [[ "${FORCE}" -eq 0 && "${old_head}" == "${new_head}" ]]; then
+  log "no git changes detected; skipping rebuild and restart"
+  "${ROOT_DIR}/scripts/healthcheck.sh"
+  log "deploy finished without restart"
+  exit 0
+fi
+
+if [[ "${FORCE}" -eq 1 ]]; then
+  log "force mode enabled; rebuilding current project"
+else
+  log "code changed: ${old_head} -> ${new_head}"
+fi
+
+"${compose_cmd[@]}" build
+"${compose_cmd[@]}" up -d
 
 "${ROOT_DIR}/scripts/healthcheck.sh"
+log "deploy finished successfully"
