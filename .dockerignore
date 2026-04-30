@@ -1,0 +1,7 @@
+.git
+.env
+.next
+node_modules
+npm-debug.log
+config/*.local.yaml
+config/production.yaml
