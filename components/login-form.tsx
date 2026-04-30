@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LogIn } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { loginAdmin } from "@/lib/api";
+import { loginAdmin, saveAdminToken } from "@/lib/api";
 
 const loginSchema = z.object({
   username: z.string().min(2, "请输入用户名"),
@@ -17,14 +18,21 @@ type LoginValues = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
   const [message, setMessage] = useState("");
+  const router = useRouter();
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { username: "admin", password: "admin123" }
+    defaultValues: { username: "admin", password: "AlaPet@2026" }
   });
 
   async function onSubmit(values: LoginValues) {
-    const result = await loginAdmin(values);
-    setMessage(result.token ? "登录骨架已打通，接入真实 API 后写入会话" : "登录失败");
+    try {
+      const result = await loginAdmin(values);
+      saveAdminToken(result.token);
+      setMessage("登录成功");
+      router.push("/dashboard");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "登录失败");
+    }
   }
 
   return (

@@ -1,8 +1,16 @@
 node_modules
 .next
 .env
+.env.*
+!.env.example
+*.local
+*.local.yaml
 npm-debug.log
+*.log
 *.tsbuildinfo
 exports/
 config/*.local.yaml
 config/production.yaml
+dist/
+build/
+coverage/

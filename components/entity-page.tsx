@@ -1,9 +1,12 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { PageTitle } from "@/components/page-title";
-import { listEntityRows, type EntityKind } from "@/lib/api";
+import { listEntityRows, offlineArticle, publishArticle, type AdminRow, type EntityKind } from "@/lib/api";
 
 type EntityPageProps = {
   title: string;
@@ -12,8 +15,36 @@ type EntityPageProps = {
   createHref?: string;
 };
 
-export async function EntityPage({ title, description, entity, createHref }: EntityPageProps) {
-  const rows = await listEntityRows(entity);
+export function EntityPage({ title, description, entity, createHref }: EntityPageProps) {
+  const [rows, setRows] = useState<AdminRow[]>([]);
+  const [message, setMessage] = useState("");
+
+  const loadRows = useCallback(async () => {
+    try {
+      const result = await listEntityRows(entity);
+      setRows(result.items);
+      setMessage("");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "加载失败");
+    }
+  }, [entity]);
+
+  useEffect(() => {
+    void loadRows();
+  }, [loadRows]);
+
+  async function mutateArticle(id: string, action: "publish" | "offline") {
+    try {
+      if (action === "publish") {
+        await publishArticle(id);
+      } else {
+        await offlineArticle(id);
+      }
+      await loadRows();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "操作失败");
+    }
+  }
 
   return (
     <>
@@ -28,7 +59,8 @@ export async function EntityPage({ title, description, entity, createHref }: Ent
           </Button>
         ) : null}
       </div>
-      <DataTable rows={rows.items} />
+      {message ? <p className="rounded-md border border-line bg-white p-4 text-sm text-red-700">{message}</p> : null}
+      <DataTable rows={rows} entity={entity} onPublish={(id) => mutateArticle(id, "publish")} onOffline={(id) => mutateArticle(id, "offline")} />
     </>
   );
 }

@@ -79,7 +79,8 @@ COMPOSE_PROJECT_NAME=ala-pet-admin-2 ADMIN_PORT=3101 ./scripts/deploy.sh --force
 ./scripts/logs.sh
 ```
 
-脚本内部使用 `docker compose logs -f --tail=200`。
+脚本默认使用 `docker compose logs --tail=200`。
+默认只输出最近 200 行，不会持续跟随；需要跟随日志时显式执行 `./scripts/logs.sh --follow` 或 `./scripts/logs.sh -f`。
 
 ### 回滚建议
 

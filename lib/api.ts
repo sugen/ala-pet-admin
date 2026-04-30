@@ -4,6 +4,8 @@ export type AdminRow = {
   status: string;
   owner: string;
   updatedAt: string;
+  slug?: string;
+  publishType?: string;
 };
 
 export type DashboardStat = {
@@ -45,7 +47,9 @@ type LoginResponse = {
 };
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-const apiMode = process.env.NEXT_PUBLIC_API_MODE || "mock";
+const apiMode = process.env.NEXT_PUBLIC_API_MODE || "real";
+const resolvedApiBaseUrl = apiBaseUrl || "http://127.0.0.1:8080";
+const tokenStorageKey = "ala-pet-admin-token";
 
 const mockRows: Record<EntityKind, AdminRow[]> = {
   articles: [
@@ -107,24 +111,38 @@ const mockStats: DashboardStat[] = [
   { label: "AI任务状态", value: "排队中" }
 ];
 
-async function request<T>(path: string, fallback: T, init?: RequestInit): Promise<T> {
-  if (apiMode !== "real" || !apiBaseUrl) {
+function getAdminToken() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+  return window.localStorage.getItem(tokenStorageKey) ?? "";
+}
+
+export function saveAdminToken(token: string) {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(tokenStorageKey, token);
+  }
+}
+
+async function request<T>(path: string, fallback: T, init?: RequestInit, options: { auth?: boolean } = { auth: true }): Promise<T> {
+  if (apiMode !== "real" || !resolvedApiBaseUrl) {
     return fallback;
   }
 
-  try {
-    const response = await fetch(new URL(path, apiBaseUrl).toString(), {
-      ...init,
-      headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) }
-    });
-    if (!response.ok) {
-      return fallback;
-    }
-    const body = (await response.json()) as ApiResponse<T>;
-    return body.data ?? fallback;
-  } catch {
-    return fallback;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const initHeaders = init?.headers instanceof Headers ? Object.fromEntries(init.headers.entries()) : (init?.headers as Record<string, string> | undefined);
+  Object.assign(headers, initHeaders ?? {});
+  const token = options.auth === false ? "" : getAdminToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
+
+  const response = await fetch(new URL(path, resolvedApiBaseUrl).toString(), { ...init, headers, cache: "no-store" });
+  const body = (await response.json().catch(() => null)) as ApiResponse<T> | null;
+  if (!response.ok || !body || body.code !== 0) {
+    throw new Error(body?.message || `请求失败：${response.status}`);
+  }
+  return body.data ?? fallback;
 }
 
 function listResult<T>(items: T[]): ListResponse<T> {
@@ -135,7 +153,8 @@ export async function loginAdmin(payload: { username: string; password: string }
   return request<LoginResponse>(
     "/api/admin/login",
     { token: "mock-admin-token", token_type: "Bearer", expires_at: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString() },
-    { method: "POST", body: JSON.stringify(payload) }
+    { method: "POST", body: JSON.stringify(payload) },
+    { auth: false }
   );
 }
 
@@ -148,13 +167,62 @@ export async function getDashboard() {
 }
 
 export async function listEntityRows(kind: EntityKind) {
-  return request<ListResponse<AdminRow>>(`/api/admin/${kind}`, listResult(mockRows[kind] ?? []));
+  const data = await request<ListResponse<Record<string, unknown>>>(listPath(kind), listResult(mockRows[kind] ?? []));
+  return { items: data.items.map(toAdminRow), total: data.total };
 }
 
-export async function submitEntity(kind: EntityKind, payload: Record<string, unknown>) {
-  return request<{ accepted: boolean; resource: EntityKind; payload: Record<string, unknown> }>(
-    `/api/admin/${kind}`,
-    { accepted: true, resource: kind, payload },
-    { method: "POST", body: JSON.stringify(payload) }
-  );
+export async function getEntity(kind: EntityKind, id: string) {
+  return request<Record<string, unknown>>(`/api/admin/${kind}/${id}`, {});
+}
+
+export async function submitEntity(kind: EntityKind, payload: Record<string, unknown>, id?: string) {
+  const method = id ? "PUT" : "POST";
+  const basePath = kind === "beauty" || kind === "daily" || kind === "samples" ? "articles" : kind;
+  const path = id ? `/api/admin/${basePath}/${id}` : `/api/admin/${basePath}`;
+  const data = await request<Record<string, unknown>>(path, {}, { method, body: JSON.stringify(payload) });
+  return { accepted: true, resource: kind, payload, data };
+}
+
+export async function publishArticle(id: string) {
+  return request<Record<string, unknown>>(`/api/admin/articles/${id}/publish`, {}, { method: "POST" });
+}
+
+export async function offlineArticle(id: string) {
+  return request<Record<string, unknown>>(`/api/admin/articles/${id}/offline`, {}, { method: "POST" });
+}
+
+export async function deleteEntity(kind: EntityKind, id: string) {
+  return request<Record<string, unknown>>(`/api/admin/${kind}/${id}`, {}, { method: "DELETE" });
+}
+
+function toAdminRow(item: Record<string, unknown>): AdminRow {
+  const id = String(item.id ?? "");
+  return {
+    id,
+    name: String(item.name ?? item.title ?? item.task_name ?? id),
+    status: String(item.status ?? ""),
+    owner: String(item.owner ?? item.sourceName ?? item.source_name ?? item.role ?? ""),
+    updatedAt: String(item.updatedAt ?? item.updated_at ?? ""),
+    slug: typeof item.slug === "string" ? item.slug : undefined,
+    publishType: typeof item.publishType === "string" ? item.publishType : undefined
+  };
+}
+
+function listPath(kind: EntityKind) {
+  if (kind === "daily") {
+    return "/api/admin/articles?publish_type=daily";
+  }
+  if (kind === "beauty") {
+    return "/api/admin/articles?publish_type=beauty";
+  }
+  if (kind === "samples") {
+    return "/api/admin/articles?publish_type=sample";
+  }
+  if (kind === "public-voice") {
+    return "/api/admin/public-metrics";
+  }
+  if (kind === "seo" || kind === "settings") {
+    return "/api/admin/settings";
+  }
+  return `/api/admin/${kind}`;
 }
