@@ -2,6 +2,7 @@ app:
   env: "production"
   port: 3001
   api_base_url: "https://api.ala.pet"
+  api_mode: "mock"
 
 docker:
   image: "ala-pet-admin"

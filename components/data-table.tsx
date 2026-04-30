@@ -1,22 +1,17 @@
 "use client";
 
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
+import type { AdminRow } from "@/lib/api";
 
-type Row = {
-  id: string;
-  name: string;
-  status: string;
-  updatedAt: string;
-};
-
-const columns: ColumnDef<Row>[] = [
+const columns: ColumnDef<AdminRow>[] = [
   { accessorKey: "id", header: "ID" },
   { accessorKey: "name", header: "名称" },
   { accessorKey: "status", header: "状态" },
+  { accessorKey: "owner", header: "负责人" },
   { accessorKey: "updatedAt", header: "更新时间" }
 ];
 
-export function DataTable({ rows = [] }: { rows?: Row[] }) {
+export function DataTable({ rows = [] }: { rows?: AdminRow[] }) {
   const table = useReactTable({ data: rows, columns, getCoreRowModel: getCoreRowModel() });
 
   return (
