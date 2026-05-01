@@ -16,6 +16,13 @@ export type DashboardStat = {
   value: string;
 };
 
+export type SettingRow = AdminRow & {
+  configKey: string;
+  configValue: string;
+  valueType: string;
+  description: string;
+};
+
 export type EntityKind =
   | "articles"
   | "daily"
@@ -196,6 +203,11 @@ export async function listEntityRows(kind: EntityKind, options: { status?: strin
   return { items: data.items.map(toAdminRow), total: data.total };
 }
 
+export async function listSettings() {
+  const data = await request<ListResponse<Record<string, unknown>>>("/api/admin/settings", listResult([]));
+  return { items: data.items.map(toSettingRow), total: data.total };
+}
+
 export async function getEntity(kind: EntityKind, id: string) {
   return request<Record<string, unknown>>(`/api/admin/${kind}/${id}`, {});
 }
@@ -206,6 +218,10 @@ export async function submitEntity(kind: EntityKind, payload: Record<string, unk
   const path = id ? `/api/admin/${basePath}/${id}` : `/api/admin/${basePath}`;
   const data = await request<Record<string, unknown>>(path, {}, { method, body: JSON.stringify(payload) });
   return { accepted: true, resource: kind, payload, data };
+}
+
+export async function updateSetting(payload: { config_key: string; config_value: string; value_type: string; description: string; status: string }) {
+  return request<Record<string, unknown>>("/api/admin/settings", {}, { method: "PUT", body: JSON.stringify(payload) });
 }
 
 export async function publishArticle(id: string) {
@@ -233,6 +249,17 @@ function toAdminRow(item: Record<string, unknown>): AdminRow {
     sourceUrl: typeof item.source_url === "string" ? item.source_url : typeof item.sourceUrl === "string" ? item.sourceUrl : undefined,
     riskLevel: typeof item.risk_level === "string" ? item.risk_level : typeof item.riskLevel === "string" ? item.riskLevel : undefined,
     contentHash: typeof item.content_hash === "string" ? item.content_hash : undefined
+  };
+}
+
+function toSettingRow(item: Record<string, unknown>): SettingRow {
+  const row = toAdminRow(item);
+  return {
+    ...row,
+    configKey: String(item.configKey ?? item.config_key ?? row.name),
+    configValue: String(item.configValue ?? item.config_value ?? ""),
+    valueType: String(item.valueType ?? item.value_type ?? row.owner),
+    description: String(item.description ?? "")
   };
 }
 

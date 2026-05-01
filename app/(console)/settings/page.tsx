@@ -1,5 +1,5 @@
-import { EntityPage } from "@/components/entity-page";
+import { SettingsManager } from "@/components/settings-manager";
 
 export default function SettingsPage() {
-  return <EntityPage entity="settings" title="系统设置" description="查看系统配置、发布规则和内部服务地址。" />;
+  return <SettingsManager />;
 }
