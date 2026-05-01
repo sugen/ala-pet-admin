@@ -7,6 +7,14 @@ export type AdminRow = {
   slug?: string;
   publishType?: string;
   sourceUrl?: string;
+  sourceType?: string;
+  originalTitle?: string;
+  rewriteMethod?: string;
+  coverImageUrl?: string;
+  coverImageSource?: string;
+  copyrightRisk?: string;
+  complianceNotes?: string;
+  humanReviewRequired?: boolean;
   riskLevel?: string;
   contentHash?: string;
 };
@@ -225,7 +233,7 @@ export async function updateSetting(payload: { config_key: string; config_value:
 }
 
 export async function publishArticle(id: string) {
-  return request<Record<string, unknown>>(`/api/admin/articles/${id}/publish`, {}, { method: "POST" });
+  return request<Record<string, unknown>>(`/api/admin/articles/${id}/publish`, {}, { method: "POST", body: JSON.stringify({ human_review_confirmed: true }) });
 }
 
 export async function offlineArticle(id: string) {
@@ -247,6 +255,14 @@ function toAdminRow(item: Record<string, unknown>): AdminRow {
     slug: typeof item.slug === "string" ? item.slug : undefined,
     publishType: typeof item.publishType === "string" ? item.publishType : undefined,
     sourceUrl: typeof item.source_url === "string" ? item.source_url : typeof item.sourceUrl === "string" ? item.sourceUrl : undefined,
+    sourceType: typeof item.source_type === "string" ? item.source_type : typeof item.sourceType === "string" ? item.sourceType : undefined,
+    originalTitle: typeof item.original_title === "string" ? item.original_title : typeof item.originalTitle === "string" ? item.originalTitle : undefined,
+    rewriteMethod: typeof item.rewrite_method === "string" ? item.rewrite_method : typeof item.rewriteMethod === "string" ? item.rewriteMethod : undefined,
+    coverImageUrl: typeof item.cover_image_url === "string" ? item.cover_image_url : typeof item.coverImageUrl === "string" ? item.coverImageUrl : undefined,
+    coverImageSource: typeof item.cover_image_source === "string" ? item.cover_image_source : typeof item.coverImageSource === "string" ? item.coverImageSource : undefined,
+    copyrightRisk: typeof item.copyright_risk === "string" ? item.copyright_risk : typeof item.copyrightRisk === "string" ? item.copyrightRisk : undefined,
+    complianceNotes: typeof item.compliance_notes === "string" ? item.compliance_notes : typeof item.complianceNotes === "string" ? item.complianceNotes : undefined,
+    humanReviewRequired: typeof item.human_review_required === "boolean" ? item.human_review_required : typeof item.humanReviewRequired === "boolean" ? item.humanReviewRequired : undefined,
     riskLevel: typeof item.risk_level === "string" ? item.risk_level : typeof item.riskLevel === "string" ? item.riskLevel : undefined,
     contentHash: typeof item.content_hash === "string" ? item.content_hash : undefined
   };

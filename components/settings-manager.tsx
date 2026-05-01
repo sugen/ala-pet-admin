@@ -17,8 +17,10 @@ export function SettingsManager() {
   const [settings, setSettings] = useState<SettingRow[]>([]);
   const [drafts, setDrafts] = useState<Record<string, SettingDraft>>({});
   const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadSettings = useCallback(async () => {
+    setIsLoading(true);
     try {
       const result = await listSettings();
       setSettings(result.items);
@@ -26,6 +28,8 @@ export function SettingsManager() {
       setMessage("");
     } catch (error) {
       setMessage(apiFailureMessage(error, "加载系统设置失败"));
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -74,7 +78,11 @@ export function SettingsManager() {
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {settings.length ? (
+            {isLoading ? (
+              <tr>
+                <td className="px-4 py-6 text-center text-ink/55" colSpan={6}>正在加载配置...</td>
+              </tr>
+            ) : settings.length ? (
               settings.map((item) => {
                 const draft = drafts[item.configKey] ?? toDraft(item);
                 return (
@@ -106,7 +114,7 @@ export function SettingsManager() {
               })
             ) : (
               <tr>
-                <td className="px-4 py-6 text-center text-ink/55" colSpan={6}>暂无配置项</td>
+                <td className="px-4 py-6 text-center text-ink/55" colSpan={6}>{message ? "系统设置加载失败，请查看上方错误提示。" : "暂无配置项"}</td>
               </tr>
             )}
           </tbody>

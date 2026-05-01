@@ -19,14 +19,18 @@ export function EntityPage({ title, description, entity, createHref }: EntityPag
   const [rows, setRows] = useState<AdminRow[]>([]);
   const [message, setMessage] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadRows = useCallback(async () => {
+    setIsLoading(true);
     try {
       const result = await listEntityRows(entity, entity === "articles" || entity === "leads" ? { status: statusFilter } : entity === "raw-contents" ? { processStatus: statusFilter } : {});
       setRows(result.items);
       setMessage("");
     } catch (error) {
       setMessage(apiFailureMessage(error, "加载列表失败"));
+    } finally {
+      setIsLoading(false);
     }
   }, [entity, statusFilter]);
 
@@ -37,6 +41,9 @@ export function EntityPage({ title, description, entity, createHref }: EntityPag
   async function mutateArticle(id: string, action: "publish" | "offline") {
     try {
       if (action === "publish") {
+        if (!window.confirm("确认已完成来源、版权风险和人工审核检查，并发布这篇文章？")) {
+          return;
+        }
         await publishArticle(id);
       } else {
         await offlineArticle(id);
@@ -65,6 +72,12 @@ export function EntityPage({ title, description, entity, createHref }: EntityPag
       setMessage(apiFailureMessage(error, "状态更新失败"));
     }
   }
+
+  const emptyText = message && rows.length === 0
+    ? "当前列表加载失败，请查看上方错误提示。"
+    : statusFilter
+      ? "当前筛选条件下暂无匹配记录。"
+      : "暂无数据。";
 
   return (
     <>
@@ -116,7 +129,7 @@ export function EntityPage({ title, description, entity, createHref }: EntityPag
         </div>
       ) : null}
       {message ? <p className="rounded-md border border-line bg-white p-4 text-sm text-red-700">{message}</p> : null}
-      <DataTable rows={rows} entity={entity} onPublish={(id) => mutateArticle(id, "publish")} onOffline={(id) => mutateArticle(id, "offline")} onDelete={removeRow} onStatusChange={updateRowStatus} />
+      <DataTable rows={rows} entity={entity} isLoading={isLoading} emptyText={emptyText} onPublish={(id) => mutateArticle(id, "publish")} onOffline={(id) => mutateArticle(id, "offline")} onDelete={removeRow} onStatusChange={updateRowStatus} />
     </>
   );
 }

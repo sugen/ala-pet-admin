@@ -9,13 +9,15 @@ import type { AdminRow, EntityKind } from "@/lib/api";
 type DataTableProps = {
   rows?: AdminRow[];
   entity?: EntityKind;
+  isLoading?: boolean;
+  emptyText?: string;
   onPublish?: (id: string) => void;
   onOffline?: (id: string) => void;
   onDelete?: (id: string) => void;
   onStatusChange?: (id: string, status: string) => void;
 };
 
-export function DataTable({ rows = [], entity, onPublish, onOffline, onDelete, onStatusChange }: DataTableProps) {
+export function DataTable({ rows = [], entity, isLoading = false, emptyText = "暂无数据", onPublish, onOffline, onDelete, onStatusChange }: DataTableProps) {
   const baseColumns: ColumnDef<AdminRow>[] = entity === "raw-contents" ? rawContentColumns() : defaultColumns();
   const columns: ColumnDef<AdminRow>[] = [
     ...baseColumns,
@@ -126,7 +128,13 @@ export function DataTable({ rows = [], entity, onPublish, onOffline, onDelete, o
           ))}
         </thead>
         <tbody>
-          {table.getRowModel().rows.length ? (
+          {isLoading ? (
+            <tr>
+              <td className="px-4 py-8 text-center text-ink/55" colSpan={columns.length}>
+                正在加载列表...
+              </td>
+            </tr>
+          ) : table.getRowModel().rows.length ? (
             table.getRowModel().rows.map((row) => (
               <tr key={row.id} className="border-t border-line">
                 {row.getVisibleCells().map((cell) => (
@@ -139,7 +147,7 @@ export function DataTable({ rows = [], entity, onPublish, onOffline, onDelete, o
           ) : (
             <tr>
               <td className="px-4 py-8 text-center text-ink/55" colSpan={columns.length}>
-                暂无数据
+                {emptyText}
               </td>
             </tr>
           )}
