@@ -18,7 +18,7 @@ type DataTableProps = {
 };
 
 export function DataTable({ rows = [], entity, isLoading = false, emptyText = "暂无数据", onPublish, onOffline, onDelete, onStatusChange }: DataTableProps) {
-  const baseColumns: ColumnDef<AdminRow>[] = entity === "raw-contents" ? rawContentColumns() : defaultColumns();
+  const baseColumns: ColumnDef<AdminRow>[] = entity === "raw-contents" ? rawContentColumns() : entity === "articles" ? articleColumns() : defaultColumns();
   const columns: ColumnDef<AdminRow>[] = [
     ...baseColumns,
     ...(entity === "articles"
@@ -115,12 +115,13 @@ export function DataTable({ rows = [], entity, isLoading = false, emptyText = "�
 
   return (
     <div className="overflow-hidden rounded-md border border-line bg-white shadow-soft">
-      <table className="w-full border-collapse text-left text-sm">
+      <div className="overflow-x-auto">
+      <table className="min-w-[860px] w-full border-collapse text-left text-sm">
         <thead className="bg-ink text-ivory">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                <th key={header.id} className="px-4 py-3 font-medium">
+                <th key={header.id} className="whitespace-nowrap px-4 py-3 font-medium">
                   {flexRender(header.column.columnDef.header, header.getContext())}
                 </th>
               ))}
@@ -138,7 +139,7 @@ export function DataTable({ rows = [], entity, isLoading = false, emptyText = "�
             table.getRowModel().rows.map((row) => (
               <tr key={row.id} className="border-t border-line">
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-3 text-ink/75">
+                  <td key={cell.id} className="px-4 py-3 align-top text-ink/75">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -153,30 +154,47 @@ export function DataTable({ rows = [], entity, isLoading = false, emptyText = "�
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
 
 function defaultColumns(): ColumnDef<AdminRow>[] {
   return [
-    { accessorKey: "id", header: "ID" },
-    { accessorKey: "name", header: "名称" },
+    { accessorKey: "id", header: "ID", cell: ({ row }) => <TruncatedText value={row.original.id} className="max-w-[88px] font-medium text-ink" /> },
+    { accessorKey: "name", header: "名称", cell: ({ row }) => <TruncatedText value={row.original.name} className="max-w-[360px] font-medium text-ink" /> },
     { accessorKey: "status", header: "状态", cell: ({ row }) => <StatusBadge value={row.original.status} /> },
-    { accessorKey: "owner", header: "负责人" },
-    { accessorKey: "updatedAt", header: "更新时间" }
+    { accessorKey: "owner", header: "负责人", cell: ({ row }) => <TruncatedText value={row.original.owner} className="max-w-[160px]" /> },
+    { accessorKey: "updatedAt", header: "更新时间", cell: ({ row }) => <TruncatedText value={row.original.updatedAt} className="max-w-[160px]" /> }
+  ];
+}
+
+function articleColumns(): ColumnDef<AdminRow>[] {
+  return [
+    { accessorKey: "id", header: "ID", cell: ({ row }) => <TruncatedText value={row.original.id} className="max-w-[76px] font-medium text-ink" /> },
+    { accessorKey: "name", header: "标题", cell: ({ row }) => <TruncatedText value={row.original.name} className="max-w-[300px] font-medium text-ink" /> },
+    { accessorKey: "publishType", header: "频道", cell: ({ row }) => <TypeBadge value={row.original.publishType || "news"} /> },
+    { accessorKey: "status", header: "状态", cell: ({ row }) => <StatusBadge value={row.original.status} /> },
+    { accessorKey: "sourceType", header: "来源类型", cell: ({ row }) => <TruncatedText value={row.original.sourceType ?? "-"} className="max-w-[120px]" /> },
+    { accessorKey: "riskLevel", header: "风险", cell: ({ row }) => <TruncatedText value={row.original.riskLevel ?? row.original.copyrightRisk ?? "-"} className="max-w-[88px]" /> },
+    { accessorKey: "updatedAt", header: "更新时间", cell: ({ row }) => <TruncatedText value={row.original.updatedAt} className="max-w-[150px]" /> }
   ];
 }
 
 function rawContentColumns(): ColumnDef<AdminRow>[] {
   return [
-    { accessorKey: "id", header: "ID" },
-    { accessorKey: "name", header: "标题" },
-    { accessorKey: "owner", header: "来源" },
-    { accessorKey: "sourceUrl", header: "原文链接", cell: ({ row }) => <span className="line-clamp-1 break-all">{row.original.sourceUrl}</span> },
+    { accessorKey: "id", header: "ID", cell: ({ row }) => <TruncatedText value={row.original.id} className="max-w-[88px] font-medium text-ink" /> },
+    { accessorKey: "name", header: "标题", cell: ({ row }) => <TruncatedText value={row.original.name} className="max-w-[320px] font-medium text-ink" /> },
+    { accessorKey: "owner", header: "来源", cell: ({ row }) => <TruncatedText value={row.original.owner} className="max-w-[180px]" /> },
+    { accessorKey: "sourceUrl", header: "原文链接", cell: ({ row }) => <TruncatedText value={row.original.sourceUrl ?? ""} className="max-w-[280px]" /> },
     { accessorKey: "status", header: "处理状态", cell: ({ row }) => <StatusBadge value={row.original.status} /> },
-    { accessorKey: "riskLevel", header: "风险" },
-    { accessorKey: "updatedAt", header: "创建时间" }
+    { accessorKey: "riskLevel", header: "风险", cell: ({ row }) => <TruncatedText value={row.original.riskLevel ?? ""} className="max-w-[120px]" /> },
+    { accessorKey: "updatedAt", header: "创建时间", cell: ({ row }) => <TruncatedText value={row.original.updatedAt} className="max-w-[160px]" /> }
   ];
+}
+
+function TruncatedText({ value, className = "" }: { value: string; className?: string }) {
+  return <span className={`block truncate ${className}`} title={value}>{value || "-"}</span>;
 }
 
 function StatusBadge({ value }: { value: string }) {
@@ -214,4 +232,16 @@ function StatusBadge({ value }: { value: string }) {
     spam: "border-red-200 bg-red-50 text-red-700"
   };
   return <span className={`inline-flex rounded px-2 py-1 text-xs font-medium ${toneMap[normalized] ?? "border-line bg-ivory text-ink/70"}`}>{labelMap[normalized] ?? normalized}</span>;
+}
+
+function TypeBadge({ value }: { value: string }) {
+  const labelMap: Record<string, string> = {
+    news: "动态",
+    daily: "快讯",
+    beauty: "洗护",
+    sample: "报告/样本",
+    brand: "品牌",
+    metric: "数据"
+  };
+  return <span className="inline-flex rounded border border-line bg-ivory px-2 py-1 text-xs font-medium text-ink/70">{labelMap[value] ?? value}</span>;
 }

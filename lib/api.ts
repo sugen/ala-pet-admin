@@ -24,6 +24,14 @@ export type DashboardStat = {
   value: string;
 };
 
+export type AIProviderStatus = {
+  provider: string;
+  status: string;
+  model: string;
+  message: string;
+  storageMode: string;
+};
+
 export type SettingRow = AdminRow & {
   configKey: string;
   configValue: string;
@@ -43,6 +51,8 @@ export type EntityKind =
   | "ai-tasks"
   | "raw-contents"
   | "public-events"
+  | "indices"
+  | "rankings"
   | "leads"
   | "seo"
   | "settings";
@@ -112,6 +122,12 @@ const mockRows: Record<EntityKind, AdminRow[]> = {
   ],
   "public-events": [
     { id: "EVT-001", name: "宠物洗护门店关注标准化服务体验", status: "已确认", owner: "事件库", updatedAt: "2026-04-30 13:22" }
+  ],
+  indices: [
+    { id: "IDX-001", name: "综合观察指数", status: "开发样例", owner: "行业指数", updatedAt: "2026-04-30 10:10" }
+  ],
+  rankings: [
+    { id: "RNK-001", name: "品牌热度样例", status: "开发样例", owner: "品牌观察", updatedAt: "2026-04-30 10:20" }
   ],
   leads: [
     { id: "LED-001", name: "提交样例品牌资料", status: "待处理", owner: "线索管理", updatedAt: "2026-04-30 12:35" }
@@ -204,6 +220,27 @@ export async function getDashboard() {
     latestArticles: mockRows.articles,
     latestLeads: mockRows.leads
   });
+}
+
+export async function getAiProviderStatus(): Promise<AIProviderStatus> {
+  try {
+    const response = await fetch("/api/ai-worker-health", { cache: "no-store" });
+    const body = (await response.json().catch(() => null)) as { ok?: boolean; data?: Record<string, unknown>; message?: string } | null;
+    if (!body?.ok || !body.data) {
+      return { provider: "unknown", status: "unavailable", model: "", message: body?.message ?? "AI Worker health unavailable", storageMode: "unknown" };
+    }
+    const providerStatus = (body.data.provider_status ?? {}) as Record<string, unknown>;
+    return {
+      provider: String(body.data.provider ?? providerStatus.provider ?? "unknown"),
+      status: String(providerStatus.status ?? "unknown"),
+      model: String(providerStatus.model ?? ""),
+      message: String(providerStatus.message ?? ""),
+      storageMode: String(body.data.storage_mode ?? "unknown")
+    };
+  } catch (error) {
+    const message = error instanceof Error && error.message ? error.message : "AI Worker health unavailable";
+    return { provider: "unknown", status: "unavailable", model: "", message, storageMode: "unknown" };
+  }
 }
 
 export async function listEntityRows(kind: EntityKind, options: { status?: string; processStatus?: string } = {}) {

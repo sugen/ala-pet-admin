@@ -26,6 +26,8 @@ COPYFILE_DISABLE=1 tar \
   --exclude='./.env' \
   --exclude='./.env.*' \
   --exclude='./config/*.local.yaml' \
+  --exclude='./storage' \
+  --exclude='./storage/**' \
   --exclude='./exports' \
   --exclude='./.DS_Store' \
   -czf "${ARCHIVE_PATH}" \

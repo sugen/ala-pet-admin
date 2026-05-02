@@ -12,11 +12,14 @@ import { apiFailureMessage, getEntity, submitEntity } from "@/lib/api";
 
 const sourceSchema = z.object({
   name: z.string().min(2, "请填写来源名称"),
-  source_type: z.enum(["news", "industry", "exhibition", "brand", "rss", "report", "government", "association", "other"]),
+  source_type: z.enum(["news", "industry", "exhibition", "brand", "rss", "report", "government", "association", "social", "other"]),
   base_url: z.string().url("请填写有效站点地址"),
   rss_url: z.string().url("请填写有效 RSS 地址").optional().or(z.literal("")),
   credibility_level: z.enum(["high", "medium", "low"]),
   robots_allowed: z.boolean(),
+  robots_policy: z.enum(["respect", "manual_review", "disallow"]),
+  crawl_policy: z.enum(["allowed", "manual_review", "forbidden"]),
+  license_status: z.enum(["unknown", "public", "authorized", "restricted"]),
   status: z.enum(["active", "paused", "disabled"])
 });
 
@@ -27,7 +30,7 @@ export function SourceForm({ id }: { id?: string }) {
   const router = useRouter();
   const form = useForm<SourceFormValues>({
     resolver: zodResolver(sourceSchema),
-    defaultValues: { name: "", source_type: "other", base_url: "", rss_url: "", credibility_level: "medium", robots_allowed: true, status: "active" }
+    defaultValues: { name: "", source_type: "other", base_url: "", rss_url: "", credibility_level: "medium", robots_allowed: true, robots_policy: "respect", crawl_policy: "allowed", license_status: "unknown", status: "active" }
   });
 
   useEffect(() => {
@@ -43,6 +46,9 @@ export function SourceForm({ id }: { id?: string }) {
           rss_url: String(item.rss_url ?? ""),
           credibility_level: (String(item.credibility_level ?? "medium") as SourceFormValues["credibility_level"]),
           robots_allowed: Boolean(item.robots_allowed ?? true),
+          robots_policy: (String(item.robots_policy ?? "respect") as SourceFormValues["robots_policy"]),
+          crawl_policy: (String(item.crawl_policy ?? "allowed") as SourceFormValues["crawl_policy"]),
+          license_status: (String(item.license_status ?? "unknown") as SourceFormValues["license_status"]),
           status: (String(item.status ?? "active") as SourceFormValues["status"])
         });
       })
@@ -83,6 +89,7 @@ export function SourceForm({ id }: { id?: string }) {
               <option value="report">报告</option>
               <option value="government">政府</option>
               <option value="association">协会</option>
+              <option value="social">社交平台</option>
               <option value="other">其他</option>
             </select>
           </label>
@@ -117,6 +124,33 @@ export function SourceForm({ id }: { id?: string }) {
           <label className="flex items-center gap-3 pt-7 text-sm font-medium text-ink">
             <input className="h-4 w-4 accent-gold" type="checkbox" {...form.register("robots_allowed")} />
             robots 允许采集
+          </label>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <label className="grid gap-2 text-sm font-medium text-ink">
+            采集策略
+            <select className="h-11 rounded-md border border-line px-3 outline-none focus:border-gold" {...form.register("crawl_policy")}>
+              <option value="allowed">允许自动采集</option>
+              <option value="manual_review">仅人工审核</option>
+              <option value="forbidden">禁止采集</option>
+            </select>
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-ink">
+            Robots 策略
+            <select className="h-11 rounded-md border border-line px-3 outline-none focus:border-gold" {...form.register("robots_policy")}>
+              <option value="respect">遵守 robots</option>
+              <option value="manual_review">人工确认</option>
+              <option value="disallow">禁止采集</option>
+            </select>
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-ink">
+            授权状态
+            <select className="h-11 rounded-md border border-line px-3 outline-none focus:border-gold" {...form.register("license_status")}>
+              <option value="unknown">未知</option>
+              <option value="public">公开可观察</option>
+              <option value="authorized">已授权</option>
+              <option value="restricted">受限</option>
+            </select>
           </label>
         </div>
         <Button type="submit" className="w-fit" disabled={form.formState.isSubmitting}>

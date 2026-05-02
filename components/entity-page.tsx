@@ -92,6 +92,7 @@ export function EntityPage({ title, description, entity, createHref }: EntityPag
           </Button>
         ) : null}
       </div>
+      <ModuleMapNotice entity={entity} />
       {entity === "articles" || entity === "raw-contents" || entity === "leads" ? (
         <div className="flex max-w-xs flex-col gap-2 text-sm font-medium text-ink">
           状态筛选
@@ -131,5 +132,28 @@ export function EntityPage({ title, description, entity, createHref }: EntityPag
       {message ? <p className="rounded-md border border-line bg-white p-4 text-sm text-red-700">{message}</p> : null}
       <DataTable rows={rows} entity={entity} isLoading={isLoading} emptyText={emptyText} onPublish={(id) => mutateArticle(id, "publish")} onOffline={(id) => mutateArticle(id, "offline")} onDelete={removeRow} onStatusChange={updateRowStatus} />
     </>
+  );
+}
+
+function ModuleMapNotice({ entity }: { entity: EntityKind }) {
+  const map: Partial<Record<EntityKind, { title: string; text: string }>> = {
+    articles: { title: "前台对应：首页头条 / 动态 / 快讯 / 报告 / 专题 / 推荐位", text: "头条、推荐、专题暂用 seo_keywords 标签；快讯使用 publish_type=daily；报告样本使用 publish_type=sample + source_type=report；demo/sample 不进入正式新闻流。" },
+    brands: { title: "前台对应：品牌库 / 首页品牌精选 / 品牌榜", text: "品牌资料展示公开字段；纠错和新增品牌由投稿合作进入线索管理。" },
+    indices: { title: "前台对应：行业指数 / 首页指数 / 数据中心", text: "当前为只读入口；正式编辑、规则、审核和版本管理待后续补齐。" },
+    rankings: { title: "前台对应：榜单中心 / 首页热榜 / 品牌榜", text: "当前为只读入口；正式榜单规则、人工审核和发布流程待后续补齐。" },
+    "raw-contents": { title: "前台对应：数据中心来源链路", text: "原始内容只作为处理链路和证据来源，不直接进入正式新闻流。" },
+    samples: { title: "前台对应：报告中心 / 数据中心样本资料", text: "样本资料必须保留来源、公开链接和审核边界。" },
+    leads: { title: "前台对应：投稿合作", text: "前台 /submit-brand 提交的品牌资料、纠错和合作线索在此处理。" },
+    "public-voice": { title: "前台对应：数据趋势", text: "公开指标和趋势卡片只用于行业观察，不构成排名或商业评价。" }
+  };
+  const item = map[entity];
+  if (!item) {
+    return null;
+  }
+  return (
+    <div className="rounded-md border border-line bg-white p-4 text-sm shadow-soft">
+      <p className="font-semibold text-ink">{item.title}</p>
+      <p className="mt-2 leading-6 text-ink/65">{item.text}</p>
+    </div>
   );
 }

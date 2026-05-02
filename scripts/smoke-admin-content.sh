@@ -16,6 +16,23 @@ fail() {
   exit 1
 }
 
+fail_page() {
+  local message="$1"
+  local url="$2"
+  local status="$3"
+  local body_file="$4"
+
+  echo "admin content smoke failed: ${message}" >&2
+  echo "FAILED_URL=${url}" >&2
+  echo "HTTP_STATUS=${status}" >&2
+  echo "PAGE_FIRST_500=" >&2
+  if [[ -f "${body_file}" ]]; then LC_ALL=C head -c 500 "${body_file}" >&2 || true; fi
+  echo >&2
+  echo "ADMIN_DEV_LOG_LAST_200=" >&2
+  if [[ -f "${LOG_FILE}" ]]; then tail -200 "${LOG_FILE}" >&2 || true; fi
+  exit 1
+}
+
 command -v jq >/dev/null 2>&1 || fail "jq is required"
 
 login_response="$("${CURL_BIN}" -sS --max-time 10 -H 'Content-Type: application/json' --data '{"username":"admin","password":"AlaPet@2026"}' "${API_BASE_URL}/api/admin/login")"
@@ -24,10 +41,10 @@ if [[ -z "${token}" ]]; then fail "admin login failed"; fi
 
 page_body="$(mktemp)"
 page_status="$("${CURL_BIN}" -sS --max-time 10 -o "${page_body}" -w '%{http_code}' "${BASE_URL}/articles/create" || true)"
-if [[ "${page_status}" != "200" ]]; then fail "article create page expected 200, got ${page_status}"; fi
-grep -F "来源类型" "${page_body}" >/dev/null || fail "source_type field missing"
-grep -F "版权风险" "${page_body}" >/dev/null || fail "copyright_risk field missing"
-grep -F "发布前需要人工审核" "${page_body}" >/dev/null || fail "human review field missing"
+if [[ "${page_status}" != "200" ]]; then fail_page "article create page expected 200, got ${page_status}" "${BASE_URL}/articles/create" "${page_status}" "${page_body}"; fi
+grep -F "来源信息" "${page_body}" >/dev/null || fail_page "source tab missing" "${BASE_URL}/articles/create" "${page_status}" "${page_body}"
+grep -F "合规审核" "${page_body}" >/dev/null || fail_page "compliance tab missing" "${BASE_URL}/articles/create" "${page_status}" "${page_body}"
+grep -F "SEO 标签" "${page_body}" >/dev/null || fail_page "seo tab missing" "${BASE_URL}/articles/create" "${page_status}" "${page_body}"
 rm -f "${page_body}"
 
 timestamp="$(date +%Y%m%d%H%M%S)"

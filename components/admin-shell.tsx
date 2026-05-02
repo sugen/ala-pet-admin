@@ -7,28 +7,32 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const apiMode = process.env.NEXT_PUBLIC_API_MODE || "real";
 
   return (
-    <div className="min-h-screen bg-[#f4f1ea] text-ink lg:grid lg:grid-cols-[260px_1fr]">
+    <div className="min-h-screen bg-[#f4f1ea] text-ink lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
       <aside className="border-r border-line bg-ink px-4 py-5 text-ivory">
         <Link href="/dashboard" className="block text-lg font-semibold">
           Ala.pet Admin
         </Link>
         <nav className="mt-7 grid gap-1 text-sm">
-          {sidebarNav.map((item) => {
+          {sidebarNav.map((item, index) => {
             const Icon = item.icon;
+            const showGroup = item.group && sidebarNav[index - 1]?.group !== item.group;
             return (
-              <Link key={item.href} href={item.href} className="flex items-center gap-3 rounded-md px-3 py-2 text-ivory/75 transition-colors hover:bg-ivory/10 hover:text-gold">
-                <Icon className="h-4 w-4" />
-                <span>{item.label}</span>
-              </Link>
+              <div key={item.href}>
+                {showGroup ? <p className="mt-3 px-3 text-[11px] font-semibold uppercase tracking-normal text-ivory/40">{item.group}</p> : null}
+                <Link href={item.href} className="flex items-center gap-3 rounded-md px-3 py-2 text-ivory/75 transition-colors hover:bg-ivory/10 hover:text-gold">
+                  <Icon className="h-4 w-4" />
+                  <span>{item.label}</span>
+                </Link>
+              </div>
             );
           })}
         </nav>
       </aside>
-      <div>
+      <div className="min-w-0">
         <header className="flex items-center justify-between gap-4 border-b border-line bg-white/75 px-6 py-4 backdrop-blur">
           <div>
             <p className="text-sm font-semibold text-ink">宠物行业公开信息与趋势观察平台后台</p>
-            <p className="mt-1 text-xs text-ink/55">内容审核、采集任务、AI 任务和系统配置</p>
+            <p className="mt-1 text-xs text-ink/55">首页、快讯、新闻、榜单、指数、报告、数据中心、品牌库和投稿合作对应管理</p>
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden rounded-md border border-line px-3 py-1 text-xs font-medium text-ink/65 sm:inline-flex">{apiMode}</span>
@@ -41,7 +45,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </Button>
           </div>
         </header>
-        <main className="px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>
     </div>
   );

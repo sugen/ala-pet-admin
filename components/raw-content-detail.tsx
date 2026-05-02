@@ -34,17 +34,24 @@ export function RawContentDetail({ id }: { id: string }) {
     <>
       <PageTitle title="原始内容详情" description="查看 crawler 入库内容的来源、摘要、摘录和处理状态。" />
       {message ? <p className="rounded-md border border-line bg-white p-4 text-sm text-red-700">{message}</p> : null}
-      <div className="grid gap-4 rounded-md border border-line bg-white p-6 text-sm shadow-soft">
-        <DetailRow label="标题" value={record?.title} />
-        <DetailRow label="来源" value={record?.source_name} />
-        <DetailRow label="摘要" value={record?.summary} />
-        <DetailRow label="原文链接" value={record?.source_url} href={record?.source_url} />
-        <DetailRow label="内容摘录" value={record?.content_excerpt} multiline />
-        <DetailRow label="content_hash" value={record?.content_hash} />
-        <DetailRow label="process_status" value={record?.process_status} />
-        <DetailRow label="risk_level" value={record?.risk_level} />
-        <DetailRow label="创建时间" value={record?.created_at} />
-      </div>
+      {!record && !message ? <p className="rounded-md border border-line bg-white p-4 text-sm text-ink/55">正在加载原始内容...</p> : null}
+      {record ? (
+        <div className="grid gap-4 text-sm lg:grid-cols-[1fr_320px]">
+          <section className="grid gap-4 rounded-md border border-line bg-white p-6 shadow-soft">
+            <DetailRow label="标题" value={record.title} />
+            <DetailRow label="摘要" value={record.summary} multiline />
+            <DetailRow label="内容摘录" value={record.content_excerpt} multiline />
+          </section>
+          <aside className="grid content-start gap-4 rounded-md border border-line bg-white p-6 shadow-soft">
+            <DetailRow label="来源" value={record.source_name} />
+            <DetailRow label="原文链接" value={record.source_url} href={record.source_url} />
+            <DetailRow label="content_hash" value={record.content_hash} />
+            <DetailRow label="process_status" value={record.process_status} />
+            <DetailRow label="risk_level" value={record.risk_level} />
+            <DetailRow label="创建时间" value={record.created_at} />
+          </aside>
+        </div>
+      ) : null}
     </>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { Globe2, LayoutDashboard, Save, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageTitle } from "@/components/page-title";
 import { apiFailureMessage, listSettings, updateSetting, type SettingRow } from "@/lib/api";
@@ -13,6 +13,14 @@ type SettingDraft = {
   status: string;
 };
 
+const requiredSiteSettings: SettingRow[] = [
+  { id: "site.icp_number", name: "备案号", status: "active", owner: "网站基础设置", updatedAt: "D21B", configKey: "site.icp_number", configValue: "沪ICP备15028254号", valueType: "string", description: "Footer 展示备案号" },
+  { id: "site.contact_email", name: "联系邮箱", status: "active", owner: "网站基础设置", updatedAt: "D21B", configKey: "site.contact_email", configValue: "info@ala.pet", valueType: "string", description: "Footer 和商务合作联系邮箱" },
+  { id: "site.copyright", name: "版权信息", status: "active", owner: "网站基础设置", updatedAt: "D21B", configKey: "site.copyright", configValue: "Copyright © 2026 Ala.pet 阿拉宠", valueType: "string", description: "Footer 版权文案" },
+  { id: "home.module_config", name: "首页模块配置", status: "active", owner: "首页运营", updatedAt: "D21B", configKey: "home.module_config", configValue: "hero=1,secondary=4,flash=8,hot=10,indices=5,trends=4,reports=3,brands=6,topics=6", valueType: "string", description: "首页模块数量约定；正式配置 UI 后可替换" },
+  { id: "home.recommendation_slots", name: "推荐位配置", status: "active", owner: "首页运营", updatedAt: "D21B", configKey: "home.recommendation_slots", configValue: "headline,recommended,newsflash,report,topic", valueType: "string", description: "当前通过 publish_type/source_type/seo_keywords 运营标记承载" }
+];
+
 export function SettingsManager() {
   const [settings, setSettings] = useState<SettingRow[]>([]);
   const [drafts, setDrafts] = useState<Record<string, SettingDraft>>({});
@@ -23,10 +31,14 @@ export function SettingsManager() {
     setIsLoading(true);
     try {
       const result = await listSettings();
-      setSettings(result.items);
-      setDrafts(Object.fromEntries(result.items.map((item) => [item.configKey, toDraft(item)])));
+      const mergedSettings = mergeRequiredSettings(result.items);
+      setSettings(mergedSettings);
+      setDrafts(Object.fromEntries(mergedSettings.map((item) => [item.configKey, toDraft(item)])));
       setMessage("");
     } catch (error) {
+      const mergedSettings = mergeRequiredSettings([]);
+      setSettings(mergedSettings);
+      setDrafts(Object.fromEntries(mergedSettings.map((item) => [item.configKey, toDraft(item)])));
       setMessage(apiFailureMessage(error, "加载系统设置失败"));
     } finally {
       setIsLoading(false);
@@ -64,6 +76,11 @@ export function SettingsManager() {
   return (
     <>
       <PageTitle title="系统设置" description="查看和更新系统配置、发布规则和内部服务地址。" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <SettingCapability icon={<Globe2 className="h-5 w-5 text-evergreen" />} title="网站基础设置" text="备案号、联系邮箱、版权文案已作为 D21B 固定配置项展示，可保存到 settings。" />
+        <SettingCapability icon={<LayoutDashboard className="h-5 w-5 text-evergreen" />} title="首页模块配置" text="Hero、次头条、快讯、热榜、指数、趋势、报告、品牌和专题数量在这里有配置说明。" />
+        <SettingCapability icon={<Star className="h-5 w-5 text-evergreen" />} title="推荐位配置" text="头条、推荐、快讯、报告、专题暂用 publish_type、source_type 和 seo_keywords 承载。" />
+      </div>
       {message ? <p className="rounded-md border border-line bg-white p-4 text-sm text-evergreen">{message}</p> : null}
       <div className="overflow-hidden rounded-md border border-line bg-white shadow-soft">
         <table className="w-full min-w-[760px] text-left text-sm">
@@ -121,6 +138,26 @@ export function SettingsManager() {
         </table>
       </div>
     </>
+  );
+}
+
+function mergeRequiredSettings(items: SettingRow[]) {
+  const current = new Map(items.map((item) => [item.configKey, item]));
+  for (const item of requiredSiteSettings) {
+    if (!current.has(item.configKey)) {
+      current.set(item.configKey, item);
+    }
+  }
+  return Array.from(current.values());
+}
+
+function SettingCapability({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
+  return (
+    <section className="rounded-md border border-line bg-white p-4 shadow-soft">
+      {icon}
+      <h2 className="mt-3 text-base font-semibold text-ink">{title}</h2>
+      <p className="mt-2 text-sm leading-6 text-ink/65">{text}</p>
+    </section>
   );
 }
 

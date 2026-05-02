@@ -121,6 +121,8 @@ check_console_pages() {
     "/ai-tasks"
     "/raw-contents"
     "/public-events"
+    "/indices"
+    "/rankings"
     "/leads"
     "/seo"
     "/settings"
