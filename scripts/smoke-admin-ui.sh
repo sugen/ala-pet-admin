@@ -55,6 +55,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 check_page "/login"
 check_page "/dashboard"
-check_page "/raw-contents"
+check_page "/contents"
+check_page "/organizations"
+check_page "/content-reviews"
 
 echo "admin ui smoke ok"

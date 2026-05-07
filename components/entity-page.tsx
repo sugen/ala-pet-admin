@@ -1,30 +1,57 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DataTable } from "@/components/data-table";
 import { PageTitle } from "@/components/page-title";
-import { apiFailureMessage, deleteEntity, listEntityRows, offlineArticle, publishArticle, submitEntity, type AdminRow, type EntityKind } from "@/lib/api";
+import { apiFailureMessage, deleteEntity, entityAction, listEntityRows, submitEntity, type AdminRow, type EntityKind } from "@/lib/api";
 
 type EntityPageProps = {
   title: string;
   description: string;
   entity: EntityKind;
-  createHref?: string;
 };
 
-export function EntityPage({ title, description, entity, createHref }: EntityPageProps) {
+const statusOptions: Partial<Record<EntityKind, Array<{ value: string; label: string }>>> = {
+  "organization-applications": [
+    { value: "pending", label: "待审核" },
+    { value: "reviewing", label: "审核中" },
+    { value: "approved", label: "已通过" },
+    { value: "rejected", label: "已拒绝" }
+  ],
+  "content-reviews": [
+    { value: "pending", label: "待审核" },
+    { value: "approved", label: "已通过" },
+    { value: "rejected", label: "已拒绝" }
+  ],
+  contents: [
+    { value: "draft", label: "草稿" },
+    { value: "pending_review", label: "待审核" },
+    { value: "published", label: "已发布" },
+    { value: "offline", label: "已下线" }
+  ],
+  comments: [
+    { value: "visible", label: "可见" },
+    { value: "hidden", label: "已隐藏" },
+    { value: "deleted", label: "已删除" }
+  ],
+  reports: [
+    { value: "draft", label: "草稿" },
+    { value: "published", label: "已发布" },
+    { value: "offline", label: "已下线" }
+  ]
+};
+
+export function EntityPage({ title, description, entity }: EntityPageProps) {
   const [rows, setRows] = useState<AdminRow[]>([]);
   const [message, setMessage] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const filters = useMemo(() => statusOptions[entity] ?? [], [entity]);
 
   const loadRows = useCallback(async () => {
     setIsLoading(true);
     try {
-      const result = await listEntityRows(entity, entity === "articles" || entity === "leads" ? { status: statusFilter } : entity === "raw-contents" ? { processStatus: statusFilter } : {});
+      const result = await listEntityRows(entity, statusFilter ? { status: statusFilter } : {});
       setRows(result.items);
       setMessage("");
     } catch (error) {
@@ -38,122 +65,54 @@ export function EntityPage({ title, description, entity, createHref }: EntityPag
     void loadRows();
   }, [loadRows]);
 
-  async function mutateArticle(id: string, action: "publish" | "offline") {
+  async function handleAction(id: string, action: string) {
     try {
-      if (action === "publish") {
-        if (!window.confirm("确认已完成来源、版权风险和人工审核检查，并发布这篇文章？")) {
-          return;
-        }
-        await publishArticle(id);
+      if (action === "delete") {
+        await deleteEntity(entity, id);
+      } else if (action === "show" || action === "hide") {
+        await submitEntity(entity, { status: action === "show" ? "visible" : "hidden", is_visible: action === "show" }, id);
+      } else if (action === "offline") {
+        await entityAction(entity, id, "offline");
       } else {
-        await offlineArticle(id);
+        await entityAction(entity, id, action);
       }
       await loadRows();
+      setMessage("操作已完成");
     } catch (error) {
-      setMessage(apiFailureMessage(error, "文章操作失败"));
+      setMessage(apiFailureMessage(error, "操作失败"));
     }
   }
 
-  async function removeRow(id: string) {
-    try {
-      await deleteEntity(entity, id);
-      await loadRows();
-    } catch (error) {
-      setMessage(apiFailureMessage(error, "删除记录失败"));
-    }
-  }
-
-  async function updateRowStatus(id: string, status: string) {
-    try {
-      await submitEntity(entity, { status, handled_by: 1 }, id);
-      await loadRows();
-      setMessage("处理状态已更新");
-    } catch (error) {
-      setMessage(apiFailureMessage(error, "状态更新失败"));
-    }
-  }
-
-  const emptyText = message && rows.length === 0
-    ? "当前列表加载失败，请查看上方错误提示。"
-    : statusFilter
-      ? "当前筛选条件下暂无匹配记录。"
-      : "暂无数据。";
+  const emptyText = message && rows.length === 0 ? "当前列表加载失败，请查看上方错误提示。" : statusFilter ? "当前筛选条件下暂无匹配记录。" : "暂无数据。";
 
   return (
     <>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <PageTitle title={title} description={description} />
-        {createHref ? (
-          <Button asChild>
-            <Link href={createHref}>
-              <Plus className="h-4 w-4" />
-              新建
-            </Link>
-          </Button>
-        ) : null}
-      </div>
-      <ModuleMapNotice entity={entity} />
-      {entity === "articles" || entity === "raw-contents" || entity === "leads" ? (
+      <PageTitle title={title} description={description} />
+      <ModuleNotice entity={entity} />
+      {filters.length ? (
         <div className="flex max-w-xs flex-col gap-2 text-sm font-medium text-ink">
           状态筛选
           <select className="h-10 rounded-md border border-line bg-white px-3 outline-none focus:border-gold" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            {entity === "articles" ? (
-              <>
-                <option value="">全部状态</option>
-                <option value="draft">草稿</option>
-                <option value="ai_generated">AI 已生成</option>
-                <option value="risk_blocked">风险拦截</option>
-                <option value="published">已发布</option>
-                <option value="offline">已下线</option>
-              </>
-            ) : entity === "leads" ? (
-              <>
-                <option value="">全部处理状态</option>
-                <option value="pending">待处理</option>
-                <option value="processing">处理中</option>
-                <option value="resolved">已解决</option>
-                <option value="rejected">已拒绝</option>
-                <option value="spam">垃圾线索</option>
-              </>
-            ) : (
-              <>
-                <option value="">全部处理状态</option>
-                <option value="pending">待处理</option>
-                <option value="processing">处理中</option>
-                <option value="processed">已处理</option>
-                <option value="failed">失败</option>
-                <option value="duplicate">重复</option>
-                <option value="blocked">已拦截</option>
-              </>
-            )}
+            <option value="">全部状态</option>
+            {filters.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
         </div>
       ) : null}
-      {message ? <p className="rounded-md border border-line bg-white p-4 text-sm text-red-700">{message}</p> : null}
-      <DataTable rows={rows} entity={entity} isLoading={isLoading} emptyText={emptyText} onPublish={(id) => mutateArticle(id, "publish")} onOffline={(id) => mutateArticle(id, "offline")} onDelete={removeRow} onStatusChange={updateRowStatus} />
+      {message ? <p className="rounded-md border border-line bg-white p-4 text-sm text-ink/70">{message}</p> : null}
+      <DataTable rows={rows} entity={entity} isLoading={isLoading} emptyText={emptyText} onAction={handleAction} />
     </>
   );
 }
 
-function ModuleMapNotice({ entity }: { entity: EntityKind }) {
+function ModuleNotice({ entity }: { entity: EntityKind }) {
   const map: Partial<Record<EntityKind, { title: string; text: string }>> = {
-    articles: { title: "前台对应：首页头条 / 动态 / 快讯 / 报告 / 专题 / 推荐位", text: "头条、推荐、专题暂用 seo_keywords 标签；快讯使用 publish_type=daily；报告样本使用 publish_type=sample + source_type=report；demo/sample 不进入正式新闻流。" },
-    brands: { title: "前台对应：品牌库 / 首页品牌精选 / 品牌榜", text: "品牌资料展示公开字段；纠错和新增品牌由投稿合作进入线索管理。" },
-    indices: { title: "前台对应：行业指数 / 首页指数 / 数据中心", text: "当前为只读入口；正式编辑、规则、审核和版本管理待后续补齐。" },
-    rankings: { title: "前台对应：榜单中心 / 首页热榜 / 品牌榜", text: "当前为只读入口；正式榜单规则、人工审核和发布流程待后续补齐。" },
-    "raw-contents": { title: "前台对应：数据中心来源链路", text: "原始内容只作为处理链路和证据来源，不直接进入正式新闻流。" },
-    samples: { title: "前台对应：报告中心 / 数据中心样本资料", text: "样本资料必须保留来源、公开链接和审核边界。" },
-    leads: { title: "前台对应：投稿合作", text: "前台 /submit-brand 提交的品牌资料、纠错和合作线索在此处理。" },
-    "public-voice": { title: "前台对应：数据趋势", text: "公开指标和趋势卡片只用于行业观察，不构成排名或商业评价。" }
+    "navigation-menus": { title: "前台菜单只用 is_visible 控制显隐", text: "第一版没有二级菜单；首页、洞察、活动、报告、行业号、关于由后台排序和开关控制。" },
+    "organization-applications": { title: "机构审核通过后生成认证机构号", text: "机构主页 slug 可编辑，但内容关联必须使用 organization_id，不使用 slug 作为业务外键。" },
+    "content-reviews": { title: "内容必须审核后展示", text: "资讯、快讯、动态和活动都进入内容审核；通过后才进入前台。" },
+    reports: { title: "报告仅平台官方发布", text: "第一版机构号不发布报告；报告附件通过文件管理维护。" },
+    comments: { title: "评论可隐藏或删除", text: "一级评论和二级回复都由评论管理统一处理，前台只展示可见评论。" }
   };
   const item = map[entity];
-  if (!item) {
-    return null;
-  }
-  return (
-    <div className="rounded-md border border-line bg-white p-4 text-sm shadow-soft">
-      <p className="font-semibold text-ink">{item.title}</p>
-      <p className="mt-2 leading-6 text-ink/65">{item.text}</p>
-    </div>
-  );
+  if (!item) return null;
+  return <div className="rounded-md border border-line bg-white p-4 text-sm shadow-soft"><p className="font-semibold text-ink">{item.title}</p><p className="mt-2 leading-6 text-ink/65">{item.text}</p></div>;
 }

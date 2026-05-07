@@ -1,9 +1,10 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Bell, UserCircle } from "lucide-react";
 import { sidebarNav } from "@/lib/nav";
 import { Button } from "@/components/ui/button";
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+export function AdminShell({ children }: { children: ReactNode }) {
   const apiMode = process.env.NEXT_PUBLIC_API_MODE || "real";
 
   return (
@@ -31,8 +32,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <div className="min-w-0">
         <header className="flex items-center justify-between gap-4 border-b border-line bg-white/75 px-6 py-4 backdrop-blur">
           <div>
-            <p className="text-sm font-semibold text-ink">宠物行业公开信息与趋势观察平台后台</p>
-            <p className="mt-1 text-xs text-ink/55">首页、快讯、新闻、榜单、指数、报告、数据中心、品牌库和投稿合作对应管理</p>
+            <p className="text-sm font-semibold text-ink">宠物行业认证信息发布平台后台</p>
+            <p className="mt-1 text-xs text-ink/55">用户、前台菜单、机构审核、内容审核、评论、报告、文件和操作日志</p>
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden rounded-md border border-line px-3 py-1 text-xs font-medium text-ink/65 sm:inline-flex">{apiMode}</span>

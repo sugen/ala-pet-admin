@@ -110,22 +110,16 @@ check_page() {
 
 check_console_pages() {
   local pages=(
-    "/articles"
-    "/daily"
-    "/beauty"
-    "/brands"
-    "/public-voice"
-    "/samples"
-    "/sources"
-    "/crawl-tasks"
-    "/ai-tasks"
-    "/raw-contents"
-    "/public-events"
-    "/indices"
-    "/rankings"
-    "/leads"
-    "/seo"
-    "/settings"
+    "/users"
+    "/navigation-menus"
+    "/organization-applications"
+    "/organizations"
+    "/content-reviews"
+    "/contents"
+    "/comments"
+    "/reports"
+    "/files"
+    "/operation-logs"
   )
 
   for page in "${pages[@]}"; do
