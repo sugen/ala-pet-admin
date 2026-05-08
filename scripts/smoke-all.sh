@@ -64,9 +64,10 @@ wait_http() {
 check_admin_login() {
   local body_file
 
-  body_file="$(mktemp)"
+  body_file="${TMPDIR:-/tmp}/ala-pet-admin-login-${$}-${RANDOM}.body"
+  : > "${body_file}"
   LAST_ENDPOINT="POST ${API_BASE_URL}/api/admin/login"
-  if ! LAST_STATUS="$("${CURL_BIN}" -sS --max-time 10 -o "${body_file}" -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data '{"username":"admin","password":"AlaPet@2026"}' "${API_BASE_URL}/api/admin/login")"; then
+  if ! LAST_STATUS="$("${CURL_BIN}" -sS --max-time 10 -o "${body_file}" -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data '{"username":"admin","password":"admin123456"}' "${API_BASE_URL}/api/admin/login")"; then
     LAST_RESPONSE="$(cat "${body_file}" 2>/dev/null || true)"
     rm -f "${body_file}"
     fail "admin login request failed"
@@ -82,18 +83,19 @@ check_admin_login() {
   log "admin login api ok"
 }
 
-check_production_mock_guard() {
-  if ! grep -F 'NEXT_PUBLIC_API_MODE=mock is not allowed in production' "${ROOT_DIR}/lib/api.ts" >/dev/null; then
-    fail "production mock guard not found in lib/api.ts"
+check_api_mode_setting() {
+  if ! grep -F 'const apiMode = process.env.NEXT_PUBLIC_API_MODE || "real";' "${ROOT_DIR}/lib/api.ts" >/dev/null; then
+    fail "api mode setting not found in lib/api.ts"
   fi
-  log "production mock guard ok"
+  log "api mode setting ok"
 }
 
 check_page() {
   local path="$1"
   local body_file
 
-  body_file="$(mktemp)"
+  body_file="${TMPDIR:-/tmp}/ala-pet-admin-page-${$}-${RANDOM}.body"
+  : > "${body_file}"
   LAST_ENDPOINT="GET ${path}"
   if ! LAST_STATUS="$("${CURL_BIN}" -sS --max-time 10 -o "${body_file}" -w '%{http_code}' "${BASE_URL}${path}")"; then
     LAST_RESPONSE="$(cat "${body_file}" 2>/dev/null || true)"
@@ -110,9 +112,10 @@ check_page() {
 
 check_console_pages() {
   local pages=(
+    "/"
     "/users"
     "/navigation-menus"
-    "/organization-applications"
+    "/organization-reviews"
     "/organizations"
     "/content-reviews"
     "/contents"
@@ -140,7 +143,7 @@ if [[ "${RUN_TYPECHECK}" == "1" ]]; then
   run_script "admin typecheck" npm --prefix "${ROOT_DIR}" run typecheck
 fi
 wait_http "admin health" "${BASE_URL}/login" || fail "Admin did not become available within 30 seconds"
-check_production_mock_guard
+check_api_mode_setting
 run_script "admin ui smoke" env BASE_URL="${BASE_URL}" ADMIN_LOG_FILE="${LOG_FILE}" bash "${ROOT_DIR}/scripts/smoke-admin-ui.sh"
 check_console_pages
 

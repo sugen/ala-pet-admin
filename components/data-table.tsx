@@ -2,6 +2,7 @@
 
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import { CheckCircle2, EyeOff, PauseCircle, RotateCcw, Trash2, XCircle } from "lucide-react";
+import { useAdminAccess } from "@/components/admin-access-context";
 import { Button } from "@/components/ui/button";
 import type { AdminRow, EntityKind } from "@/lib/api";
 
@@ -67,10 +68,12 @@ function columnsFor(entity?: EntityKind): ColumnDef<AdminRow>[] {
 }
 
 function ActionButtons({ entity, id, onAction }: { entity: EntityKind; id: string; onAction?: (id: string, action: string) => void }) {
+  const { can } = useAdminAccess();
   const actions: Partial<Record<EntityKind, Array<{ label: string; action: string; icon: typeof CheckCircle2 }>>> = {
     "organization-applications": [{ label: "通过", action: "approve", icon: CheckCircle2 }, { label: "拒绝", action: "reject", icon: XCircle }],
     "content-reviews": [{ label: "通过", action: "approve", icon: CheckCircle2 }, { label: "拒绝", action: "reject", icon: XCircle }],
     contents: [{ label: "下线", action: "offline", icon: PauseCircle }],
+    events: [{ label: "下线", action: "offline", icon: PauseCircle }],
     comments: [{ label: "隐藏", action: "hide", icon: EyeOff }, { label: "删除", action: "delete", icon: Trash2 }],
     "navigation-menus": [{ label: "显示", action: "show", icon: CheckCircle2 }, { label: "隐藏", action: "hide", icon: EyeOff }],
     reports: [{ label: "发布", action: "publish", icon: CheckCircle2 }, { label: "下线", action: "offline", icon: PauseCircle }],
@@ -78,9 +81,21 @@ function ActionButtons({ entity, id, onAction }: { entity: EntityKind; id: strin
     files: [{ label: "停用", action: "disable", icon: PauseCircle }],
     users: [{ label: "重置", action: "reset-password", icon: RotateCcw }]
   };
-  const items = actions[entity] ?? [];
+  const items = (actions[entity] ?? []).filter((item) => can(permissionForAction(entity, item.action)));
   if (!items.length) return <span className="text-ink/40">-</span>;
   return <div className="flex flex-wrap gap-2">{items.map((item) => { const Icon = item.icon; return <Button key={item.action} type="button" variant="outline" className="h-8 px-2 text-xs" onClick={() => onAction?.(id, item.action)}><Icon className="h-3.5 w-3.5" />{item.label}</Button>; })}</div>;
+}
+
+function permissionForAction(entity: EntityKind, action: string) {
+  if (entity === "organization-applications") return `organization_reviews:${action}`;
+  if (entity === "content-reviews") return `content_reviews:${action}`;
+  if (entity === "navigation-menus") return "navigation_menus:update";
+  if (entity === "operation-logs") return `operation_logs:${action}`;
+  if (entity === "system-settings") return `system_settings:${action}`;
+  if (entity === "users" && action === "reset-password") return "users:update";
+  if (entity === "organizations" && action === "enable") return "organizations:update";
+  if (entity === "files" && action === "disable") return "files:disable";
+  return `${entity}:${action}`;
 }
 
 function nameHeader(entity?: EntityKind) {

@@ -42,7 +42,8 @@ check_page() {
   local path="$1"
   local body_file
   local http_status
-  body_file="$(mktemp)"
+  body_file="${TMPDIR:-/tmp}/ala-pet-admin-ui-${$}-${RANDOM}.body"
+  : > "${body_file}"
   http_status="$(${CURL_BIN} -sS --max-time 10 -o "${body_file}" -w '%{http_code}' "${BASE_URL}${path}" || true)"
   echo "${path} ${http_status}"
   if [[ ! "${http_status}" =~ ^[0-9]{3}$ ]] || [[ "${http_status}" -lt 200 ]] || [[ "${http_status}" -ge 400 ]]; then
@@ -54,9 +55,13 @@ check_page() {
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 check_page "/login"
-check_page "/dashboard"
+check_page "/"
+check_page "/admin-accounts"
+check_page "/admin-roles"
 check_page "/contents"
+check_page "/events"
 check_page "/organizations"
 check_page "/content-reviews"
+check_page "/settings"
 
 echo "admin ui smoke ok"

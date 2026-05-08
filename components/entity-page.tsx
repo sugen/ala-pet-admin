@@ -29,6 +29,12 @@ const statusOptions: Partial<Record<EntityKind, Array<{ value: string; label: st
     { value: "published", label: "已发布" },
     { value: "offline", label: "已下线" }
   ],
+  events: [
+    { value: "draft", label: "草稿" },
+    { value: "pending_review", label: "待审核" },
+    { value: "published", label: "已发布" },
+    { value: "offline", label: "已下线" }
+  ],
   comments: [
     { value: "visible", label: "可见" },
     { value: "hidden", label: "已隐藏" },
@@ -109,6 +115,7 @@ function ModuleNotice({ entity }: { entity: EntityKind }) {
     "navigation-menus": { title: "前台菜单只用 is_visible 控制显隐", text: "第一版没有二级菜单；首页、洞察、活动、报告、行业号、关于由后台排序和开关控制。" },
     "organization-applications": { title: "机构审核通过后生成认证机构号", text: "机构主页 slug 可编辑，但内容关联必须使用 organization_id，不使用 slug 作为业务外键。" },
     "content-reviews": { title: "内容必须审核后展示", text: "资讯、快讯、动态和活动都进入内容审核；通过后才进入前台。" },
+    events: { title: "活动属于机构发布内容", text: "活动由认证机构提交，平台审核通过后展示，后台可进行更新和下线。" },
     reports: { title: "报告仅平台官方发布", text: "第一版机构号不发布报告；报告附件通过文件管理维护。" },
     comments: { title: "评论可隐藏或删除", text: "一级评论和二级回复都由评论管理统一处理，前台只展示可见评论。" }
   };

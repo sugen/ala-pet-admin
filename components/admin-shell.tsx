@@ -1,53 +1,20 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
-import { Bell, UserCircle } from "lucide-react";
-import { sidebarNav } from "@/lib/nav";
-import { Button } from "@/components/ui/button";
+import { AdminAccessGuard } from "@/components/admin-access-guard";
+import { AdminHeader } from "@/components/admin-header";
+import { AdminSidebar } from "@/components/admin-sidebar";
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const apiMode = process.env.NEXT_PUBLIC_API_MODE || "real";
 
   return (
-    <div className="min-h-screen bg-[#f4f1ea] text-ink lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
-      <aside className="border-r border-line bg-ink px-4 py-5 text-ivory">
-        <Link href="/dashboard" className="block text-lg font-semibold">
-          Ala.pet Admin
-        </Link>
-        <nav className="mt-7 grid gap-1 text-sm">
-          {sidebarNav.map((item, index) => {
-            const Icon = item.icon;
-            const showGroup = item.group && sidebarNav[index - 1]?.group !== item.group;
-            return (
-              <div key={item.href}>
-                {showGroup ? <p className="mt-3 px-3 text-[11px] font-semibold uppercase tracking-normal text-ivory/40">{item.group}</p> : null}
-                <Link href={item.href} className="flex items-center gap-3 rounded-md px-3 py-2 text-ivory/75 transition-colors hover:bg-ivory/10 hover:text-gold">
-                  <Icon className="h-4 w-4" />
-                  <span>{item.label}</span>
-                </Link>
-              </div>
-            );
-          })}
-        </nav>
-      </aside>
-      <div className="min-w-0">
-        <header className="flex items-center justify-between gap-4 border-b border-line bg-white/75 px-6 py-4 backdrop-blur">
-          <div>
-            <p className="text-sm font-semibold text-ink">宠物行业认证信息发布平台后台</p>
-            <p className="mt-1 text-xs text-ink/55">用户、前台菜单、机构审核、内容审核、评论、报告、文件和操作日志</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden rounded-md border border-line px-3 py-1 text-xs font-medium text-ink/65 sm:inline-flex">{apiMode}</span>
-            <Button variant="ghost" size="icon" aria-label="通知">
-              <Bell className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm">
-              <UserCircle className="h-4 w-4" />
-              管理员
-            </Button>
-          </div>
-        </header>
-        <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+    <AdminAccessGuard>
+      <div className="min-h-screen bg-[#f4f1ea] text-ink lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
+        <AdminSidebar />
+        <div className="min-w-0">
+          <AdminHeader apiMode={apiMode} />
+          <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        </div>
       </div>
-    </div>
+    </AdminAccessGuard>
   );
 }
